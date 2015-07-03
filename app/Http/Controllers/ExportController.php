@@ -33,13 +33,8 @@ class ExportController extends Controller
         $reader->setOffset(1);
         $items = $reader->fetchAll(function($row) {
             // Cache::get('spotify:key:here') 
-            if(!Cache::has($row[0])) {
-                Cache::forever($row[0], json_encode($row));
-            }
             
             $this->callSearchApi($row[2], $row[1]); 
-
-            print_r(Cache::get($row[0]));
 
             return true;
         });
@@ -52,26 +47,19 @@ class ExportController extends Controller
 
         $artist = urlencode($artist);
         $trackName = urlencode($trackName);
-        $client = new Client([
-            'base_url' => 'https://itunes.apple.com/search?entity=song'
-            ]);
-        $request = $client->get('&term' . $artist . '+' . $trackName, ['verify' => false]);
-        $response = $request->send();
+        $client = new Client(['verify' => false]);
+        $request = $client->get('https://itunes.apple.com/search?entity=song&term=' . $artist . '+' . $trackName);
 
-
-        if(!$response->getStatusCode() == 200) {
+        if(!$request->getStatusCode() == 200) {
             //HTTP exception
-            echo "HTTP exception";
+            Log::info("HTTP exception");
         }
 
-        if(empty($response["results"])) {
-            //No results
-            echo "No results for" . $artist . " and " . $trackName;
-        }
+        $response = $request->getBody();
 
-        Log::info($response["results"]["artistId"]);
-        Log::info($response["results"]["trackId"]);
+        $result = json_decode($response, true);
 
+        Log::info($result);
 
     }
 }
